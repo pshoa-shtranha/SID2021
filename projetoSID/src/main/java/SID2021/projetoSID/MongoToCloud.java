@@ -1,4 +1,5 @@
-package SID2021.projetoSID;
+//mantem
+package lalss;
 
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -50,7 +51,12 @@ public class MongoToCloud implements MqttCallback
     static String mongo_replica;
     static String mongo_address;
     static String mongo_database;
-    static String mongo_collection;
+    static String mongo_collection1;
+    static String mongo_collection2;
+    static String mongo_collection3;
+    static String mongo_collection4;
+    static String mongo_collection5;
+    static String mongo_collection6;
     static String mongo_criteria;
     static String mongo_fieldquery;
     static String mongo_fieldvalue;
@@ -62,6 +68,7 @@ public class MongoToCloud implements MqttCallback
     static String seconds_wait;
     static JTextArea documentLabel;
     static String mongo_authentication;
+	public static String mongo_collection;
     
     private static void createWindow() {
         final JFrame frame = new JFrame("Mongo to Cloud");
@@ -91,7 +98,7 @@ public class MongoToCloud implements MqttCallback
         try {
         	
             final Properties properties = new Properties();
-            properties.load(new FileInputStream("C:\\Users\\Visha\\git\\SID2021\\projetoSID\\src\\main\\java\\SID2021\\projetoSID\\MongoToCloud.ini"));
+            properties.load(new FileInputStream("C:\\Users\\Maintenant Prêt\\eclipse-workspace-git\\1.2\\src\\main\\java\\lalss\\MongoToCloud.ini"));
             //String q = properties.getProperty("mongo_database");
             //try {
             //colecoes = q.split(".");
@@ -107,8 +114,13 @@ public class MongoToCloud implements MqttCallback
             MongoToCloud.mongo_address = properties.getProperty("mongo_address");
             MongoToCloud.mongo_user = properties.getProperty("mongo_user");
             MongoToCloud.mongo_password = properties.getProperty("mongo_password");
-            //MongoToCloud.mongo_database = properties.getProperty("mongo_database");
-            MongoToCloud.mongo_collection = properties.getProperty("mongo_collection");
+            MongoToCloud.mongo_database = properties.getProperty("mongo_database");
+            MongoToCloud.mongo_collection1 = properties.getProperty("mongo_collection1");
+            MongoToCloud.mongo_collection2 = properties.getProperty("mongo_collection2");
+            MongoToCloud.mongo_collection3 = properties.getProperty("mongo_collection3");
+            MongoToCloud.mongo_collection4 = properties.getProperty("mongo_collection4");
+            MongoToCloud.mongo_collection5 = properties.getProperty("mongo_collection5");
+            MongoToCloud.mongo_collection6 = properties.getProperty("mongo_collection6");
             MongoToCloud.mongo_fieldquery = properties.getProperty("mongo_fieldquery");
             MongoToCloud.mongo_fieldvalue = properties.getProperty("mongo_fieldvalue");
             MongoToCloud.delete_document = properties.getProperty("delete_document");
@@ -122,18 +134,18 @@ public class MongoToCloud implements MqttCallback
             MongoToCloud.cloud_server = properties.getProperty("cloud_server");
             MongoToCloud.cloud_topic = properties.getProperty("cloud_topic");
             
-            String q = properties.getProperty("mongo_database");
-            try {
-            	colecoes = q.split(".");
-            } catch (PatternSyntaxException e) {
-        	
-            	System.out.println("Tem de utilizar o caracter correto na designação das colecoes!");
-            }
-            Thread[] varias = new Thread[colecoes.length];
+            
+            Thread[] varias = new Thread[6];
             MongoToCloud contador = new MongoToCloud();
-            for(int i = 0; i < varias.length; i++) {
-            	String atual = colecoes[i];
-            	varias[i] = contador.new incrementador(atual);
+            for(int i = 0; i < 6; i++) {
+            	
+            	String atual = "mongo_collection";
+            	int j = i + 1;
+            	String n_colecao = String.valueOf(j);
+            	String atual2 = atual.concat(n_colecao);
+            	System.out.println(properties.getProperty(atual2));
+            	int id = i;
+            	varias[i] = contador.new incrementador(properties.getProperty(atual2), id);
             	
             }
             for(Thread t:varias) {
@@ -145,21 +157,22 @@ public class MongoToCloud implements MqttCallback
             System.out.println("Error reading MongoToCloud.ini file " + obj);
             JOptionPane.showMessageDialog(null, "The MongoToCloud inifile wasn't found.", "Mongo To Cloud2", 0);
         }
-        //new MongoToCloud().connecCloud();
-        //new MongoToCloud().jsonToCloud();
+       
     }
     
     public class incrementador extends Thread {
     	
     	public String colecao;
-    	incrementador(String colecao) {
+    	public int id;
+    	incrementador(String colecao, int id) {
     		
     		this.colecao = colecao;
+    		this.id = id;
     	}
     	public void run() {
-    		MongoToCloud.mongo_database = colecao;
+    	
     		new MongoToCloud().connecCloud();
-            new MongoToCloud().jsonToCloud(colecao);
+            new MongoToCloud().jsonToCloud(colecao, id);
     	}
     }
     
@@ -185,10 +198,13 @@ public class MongoToCloud implements MqttCallback
         }
     }
     
-    public void jsonToCloud(String colecao) {
-        final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd 'at' HH:mm:ss z");
+    public void jsonToCloud(String colecao, int id) {
+        //final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd 'at' HH:mm:ss z");
         final String s = new String();
         final String s2 = new String();
+        
+        
+        
         String string = "mongodb://";
         if (MongoToCloud.mongo_authentication.equals("true")) {
             string = string + MongoToCloud.mongo_user + ":" + MongoToCloud.mongo_password + "@";
@@ -207,60 +223,13 @@ public class MongoToCloud implements MqttCallback
         }
         final MongoDatabase database = new MongoClient(new MongoClientURI(str)).getDatabase(MongoToCloud.mongo_database);
         MongoToCloud.documentLabel.append("Connection To Mongo Suceeded\n");
-        final MongoCollection collection = database.getCollection(MongoToCloud.mongo_collection);
-        final MongoCollection collection2 = database.getCollection(MongoToCloud.backup_collection);
-        final Document document = new Document();
-        if (!MongoToCloud.mongo_fieldquery.equals("null")) {
-            document.put(MongoToCloud.mongo_fieldquery, (Object)MongoToCloud.mongo_fieldvalue);
-        }
-        int i = 0;
-        int j = 0;
-        int k = 0;
-        while (i == 0) {
-            MongoToCloud.documentLabel.append("loop number ....." + j + "\n");
-            final Date date = new Date(System.currentTimeMillis());
-            MongoToCloud.documentLabel.append(simpleDateFormat.format(date) + "\n");
-            System.out.println("loop number ....." + j + "\n");
-            System.out.println(simpleDateFormat.format(date));
-            this.writeSensor("{Loop:" + j + "}");
-            final FindIterable find = collection.find((Bson)document);
-            find.iterator();
-            int n = 1;
-            final MongoCursor iterator = find.projection(Projections.excludeId()).iterator();
-            while (iterator.hasNext()) {
-                ++j;
-                ++n;
-                ++k;
-                final Document document2 = new Document();
-                final Document document3 = (Document)iterator.next();
-                final String string2 = "{id:" + k + ", doc:" + document3.toJson() + "}";
-                if (MongoToCloud.display_documents.equals("true")) {
-                	System.out.println(colecao);
-                    MongoToCloud.documentLabel.append(string2 + "\n");
-                }
-                if (MongoToCloud.create_backup.equals("true")) {
-                    collection2.insertOne((Object)document3);
-                }
-                this.writeSensor(string2);
-                if (!MongoToCloud.seconds_wait.equals("0")) {
-                    try {
-                        Thread.sleep(Integer.parseInt(MongoToCloud.seconds_wait));
-                    }
-                    catch (Exception ex) {}
-                }
-            }
-            if (MongoToCloud.delete_document.equals("true")) {
-                if (!MongoToCloud.mongo_fieldquery.equals("null")) {
-                    collection.deleteMany(Filters.eq(MongoToCloud.mongo_fieldquery, (Object)MongoToCloud.mongo_fieldvalue));
-                }
-                if (MongoToCloud.mongo_fieldquery.equals("null")) {
-                    database.getCollection(MongoToCloud.mongo_collection).drop();
-                }
-            }
-            if (!MongoToCloud.loop_query.equals("true")) {
-                i = 1;
-            }
-        }
+       final MongoCollection collection2 = database.getCollection(MongoToCloud.backup_collection);
+        
+        		final MongoCollection collection1 = database.getCollection(colecao);
+        		System.out.println(collection1.countDocuments());
+                System.out.println(colecao);
+                atualizar(collection1, database, colecao, collection2);
+        	
     }
     
     public void writeSensor(final String s) {
@@ -291,7 +260,12 @@ public class MongoToCloud implements MqttCallback
         MongoToCloud.mongo_replica = new String();
         MongoToCloud.mongo_address = new String();
         MongoToCloud.mongo_database = new String();
-        MongoToCloud.mongo_collection = new String();
+        MongoToCloud.mongo_collection1 = new String();
+        MongoToCloud.mongo_collection2 = new String();
+        MongoToCloud.mongo_collection3 = new String();
+        MongoToCloud.mongo_collection4 = new String();
+        MongoToCloud.mongo_collection5 = new String();
+        MongoToCloud.mongo_collection6 = new String();
         MongoToCloud.mongo_criteria = new String();
         MongoToCloud.mongo_fieldquery = new String();
         MongoToCloud.mongo_fieldvalue = new String();
@@ -303,5 +277,61 @@ public class MongoToCloud implements MqttCallback
         MongoToCloud.seconds_wait = new String();
         MongoToCloud.documentLabel = new JTextArea("\n");
         MongoToCloud.mongo_authentication = new String();
+    }
+    public void atualizar(MongoCollection colecao, MongoDatabase database, String coleta, MongoCollection colecao2) {
+    	final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd 'at' HH:mm:ss z");
+    	final Document document = new Document();
+    int i = 0;
+    int j = 0;
+    int k = 0;
+    //System.out.println("olaaaa");
+    while (i == 0) {
+        MongoToCloud.documentLabel.append("loop number ....." + j + "\n");
+        final Date date = new Date(System.currentTimeMillis());
+        MongoToCloud.documentLabel.append(simpleDateFormat.format(date) + "\n");
+        System.out.println("loop number ....." + j + "\n");
+        System.out.println(simpleDateFormat.format(date));
+        this.writeSensor("{Loop:" + j + "}");
+        this.writeSensor("olaaa");
+        final FindIterable find = colecao.find((Bson)document);
+       
+        find.iterator();
+        int n = 1;
+        final MongoCursor iterator = find.projection(Projections.excludeId()).iterator();
+        while (iterator.hasNext()) {
+            ++j;
+            ++n;
+            ++k;
+            final Document document2 = new Document();
+            final Document document3 = (Document)iterator.next();
+            final String string2 = "{id:" + k + ", doc:" + document3.toJson() + "}";
+            System.out.println(coleta);
+            if (MongoToCloud.display_documents.equals("true")) {
+            	
+                MongoToCloud.documentLabel.append(string2 + "\n");
+            }
+            if (MongoToCloud.create_backup.equals("true")) {
+                colecao2.insertOne(document3);
+            }
+            this.writeSensor(string2);
+            if (!MongoToCloud.seconds_wait.equals("0")) {
+                try {
+                    Thread.sleep(Integer.parseInt(MongoToCloud.seconds_wait));
+                }
+                catch (Exception ex) {}
+            }
+        }
+        if (MongoToCloud.delete_document.equals("true")) {
+            if (!MongoToCloud.mongo_fieldquery.equals("null")) {
+                colecao.deleteMany(Filters.eq(MongoToCloud.mongo_fieldquery, (Object)MongoToCloud.mongo_fieldvalue));
+            }
+            if (MongoToCloud.mongo_fieldquery.equals("null")) {
+                database.getCollection(coleta).drop();
+            }
+        }
+        if (!MongoToCloud.loop_query.equals("true")) {
+            i = 1;
+        }
+    }
     }
 }

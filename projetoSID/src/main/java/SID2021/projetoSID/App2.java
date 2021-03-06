@@ -16,9 +16,9 @@ public class App2 {
 
 			MongoDatabase db = remoteClient.getDatabase("sid2021");
 			MongoCollection<Document> mongoCollection = db.getCollection("sensorh1");
-//			printDBNames(mongoClient); 
-//			printCollections(db);
-//			printDocsInCollection(mongoCollection);
+			printDBNames(remoteClient); 
+			printCollections(db);
+			printDocsInCollection(mongoCollection);
 			MongoCursor<Document> docCursor = mongoCollection.find().iterator();
 
 			int count = 0;
