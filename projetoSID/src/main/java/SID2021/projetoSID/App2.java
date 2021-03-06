@@ -2,23 +2,34 @@ package SID2021.projetoSID;
 
 import com.mongodb.client.*;
 import org.bson.Document;
+import org.json.JSONObject;
 
 public class App2 {
-	static String connectionString = "mongodb://aluno:aluno@194.210.86.10:27017/?authSource=admin";
+	static String connectionStringRemote = "mongodb://aluno:aluno@194.210.86.10:27017/?authSource=admin";
+	static String connectionStringLocal = "mongodb://localhost:27017/";
 
-    private static final int MAX_REGISTERS = 5000;
-	
+	private static final int MAX_REGISTERS = 10;
+
 	public static void main(String[] args) {
-		try (MongoClient mongoClient = MongoClients.create(connectionString)) {
+		try (MongoClient remoteClient = MongoClients.create(connectionStringRemote);
+				MongoClient localClient = MongoClients.create(connectionStringLocal)) {
 
-			MongoDatabase db = mongoClient.getDatabase("sid2021");
+			MongoDatabase db = remoteClient.getDatabase("sid2021");
 			MongoCollection<Document> mongoCollection = db.getCollection("sensorh1");
-			
-			printDocsInCollection(mongoCollection);
-//			  printDBNames(mongoClient); 
-//			  printCollections(db);
-//			  printNumDocs(mongoCollection);
-			 
+//			printDBNames(mongoClient); 
+//			printCollections(db);
+//			printDocsInCollection(mongoCollection);
+			MongoCursor<Document> docCursor = mongoCollection.find().iterator();
+
+			int count = 0;
+			while (docCursor.hasNext() && count < MAX_REGISTERS) {
+				Document doc = docCursor.next();
+				JSONObject obj = new JSONObject(doc.toJson());
+				System.out.println(obj);
+
+				count++;
+			}
+
 		} catch (Exception e) {
 			System.out.println(e);
 		}
@@ -26,13 +37,13 @@ public class App2 {
 
 	private static void printDocsInCollection(MongoCollection<Document> mongoCollection) {
 		MongoCursor<Document> docCursor = mongoCollection.find().iterator();
-		
+
 		int count = 0;
 		while (docCursor.hasNext() && count < MAX_REGISTERS) {
-		    Document doc = docCursor.next();
-		    System.out.println(doc.toJson());
-		    
-		    count++;
+			Document doc = docCursor.next();
+			System.out.println(doc.toJson());
+
+			count++;
 		}
 	}
 
