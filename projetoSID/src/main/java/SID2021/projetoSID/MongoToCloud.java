@@ -91,7 +91,7 @@ public class MongoToCloud implements MqttCallback
         try {
         	
             final Properties properties = new Properties();
-            properties.load(new FileInputStream("C:\\Users\\Visha\\git\\SID2021\\projetoSID\\src\\main\\java\\SID2021\\projetoSID\\MongoToCloud.ini"));
+            properties.load(new FileInputStream("C:\\Users\\Maintenant Prêt\\git\\SID2021\\projetoSID\\src\\main\\java\\SID2021\\projetoSID\\MongoToCloud.ini"));
             //String q = properties.getProperty("mongo_database");
             //try {
             //colecoes = q.split(".");

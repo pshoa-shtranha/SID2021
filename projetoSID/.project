@@ -22,6 +22,11 @@
 	</natures>
 	<linkedResources>
 		<link>
+			<name>src/main/java/SID2021/projetoSID/ReceiveCloud.ini</name>
+			<type>1</type>
+			<locationURI>PARENT-3-PROJECT_LOC/eclipse-workspace-git/1.2/src/test/java/lalss/ReceiveCloud.ini</locationURI>
+		</link>
+		<link>
 			<name>src/main/java/SID2021/projetoSID/ReceiveCloud.java</name>
 			<type>1</type>
 			<locationURI>PARENT-3-PROJECT_LOC/eclipse-workspace-git/1.2/src/test/java/lalss/ReceiveCloud.java</locationURI>
