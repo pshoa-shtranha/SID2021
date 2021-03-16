@@ -28,7 +28,7 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
-
+//hey
 public class MongoToMongo {
 	static String remote_mongo_address;
 	static String remote_mongo_authentication;
@@ -241,7 +241,8 @@ public class MongoToMongo {
 		MongoCursor<Document> remoteDocCursor = remoteCollection.find().iterator();
 
 		if (load_progress.equals("true")) {
-			remoteDocCursor = loadProgressFromFile(remoteCollections, colecaoID, remoteCollection, remoteDocCursor);
+			count = loadProgressFromFile(remoteCollections, colecaoID);
+			remoteDocCursor = remoteCollection.find().skip(count).iterator();
 		}
 
 		while (i == 0) {
@@ -258,8 +259,7 @@ public class MongoToMongo {
 					if (count % 100 == 0) {
 						// saves progress every 100 documents
 						saveProgress(remoteCollections, colecaoID, remoteDoc, count);
-						MongoToMongo.documentLabel.append(localCollections[colecaoID] + " has "
-								+ localCollection.countDocuments() + " objects\n");
+						MongoToMongo.documentLabel.append(localCollections[colecaoID] + " has " + localCollection.countDocuments() + " objects\n");
 					}
 				}
 				count++;
@@ -268,7 +268,8 @@ public class MongoToMongo {
 				System.out.println("All objects in " + remoteCollections[colecaoID] + " transfered with success");
 				// reload cursor to account for new docs
 				remoteDocCursor.close();
-				remoteDocCursor = loadProgressFromFile(remoteCollections, colecaoID, remoteCollection, remoteDocCursor);
+				count = loadProgressFromFile(remoteCollections, colecaoID);
+				remoteDocCursor = remoteCollection.find().skip(count).iterator();
 				Thread.sleep(Integer.parseInt(sleep_frequency_in_milliseconds));
 			} catch (InterruptedException e) {
 				MongoToMongo.documentLabel.append(e.toString());
@@ -277,8 +278,8 @@ public class MongoToMongo {
 		}
 	}
 
-	private static MongoCursor<Document> loadProgressFromFile(String[] remoteCollections, int colecaoID,
-			MongoCollection<Document> remoteCollection, MongoCursor<Document> remoteDocCursor) {
+	private static int loadProgressFromFile(String[] remoteCollections, int colecaoID) {
+		int count = 0;
 		try {
 			File file = new File(remote_db + "_" + remoteCollections[colecaoID] + "_" + local_db + localCollections[colecaoID] + "_savefile.txt");
 			if (file.exists()) {
@@ -288,7 +289,8 @@ public class MongoToMongo {
 				while ((currentLine = reader.readLine()) != null) {
 					if (currentLine.contains(remote_db + ";" + remoteCollections[colecaoID])) {
 						String[] split = currentLine.split(";");
-						remoteDocCursor = remoteCollection.find().skip(Integer.parseInt(split[2].trim())).iterator();
+						count = Integer.parseInt(split[2].trim());
+						//remoteDocCursor = remoteCollection.find().skip(Integer.parseInt(split[2].trim())).iterator();
 						System.out.println("skipped");
 						MongoToMongo.documentLabel.append("Progress loaded for " + remoteCollections[colecaoID] + "\n");
 					}
@@ -301,7 +303,7 @@ public class MongoToMongo {
 					.append("Não foi possível carregar o progresso para " + remoteCollections[colecaoID] + "\n");
 			e.printStackTrace();
 		}
-		return remoteDocCursor;
+		return count;
 	}
 
 	private static void saveProgress(String[] remoteCollections, int colecaoID, Document remoteDoc, int count) {
