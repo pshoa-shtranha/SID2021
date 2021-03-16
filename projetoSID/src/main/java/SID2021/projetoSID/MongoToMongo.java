@@ -240,7 +240,7 @@ public class MongoToMongo {
 		int count = 0;
 		MongoCursor<Document> remoteDocCursor = remoteCollection.find().iterator();
 
-		if (load_progress.equals("true")) {
+		if (load_progress.equals("true") && !clear_local_collections_before_start.equals("true")) {
 			count = loadProgressFromFile(remoteCollections, colecaoID);
 			remoteDocCursor = remoteCollection.find().skip(count).iterator();
 		}
@@ -258,11 +258,11 @@ public class MongoToMongo {
 //							+ localCollections[colecaoID]);
 					if (count % 100 == 0) {
 						// saves progress every 100 documents
-						saveProgress(remoteCollections, colecaoID, remoteDoc, count);
+						saveProgress(remoteCollections, colecaoID, remoteDoc, localCollection.countDocuments());
 						MongoToMongo.documentLabel.append(localCollections[colecaoID] + " has " + localCollection.countDocuments() + " objects\n");
+						System.out.println(localCollections[colecaoID] + " has " + localCollection.countDocuments() + " objects\n");
 					}
 				}
-				count++;
 			}
 			try {
 				System.out.println("All objects in " + remoteCollections[colecaoID] + " transfered with success");
@@ -275,6 +275,8 @@ public class MongoToMongo {
 				MongoToMongo.documentLabel.append(e.toString());
 				e.printStackTrace();
 			}
+			//System.out.println("coleção: " + localCollections[colecaoID]  + "\nID:_" + remoteDoc.getObjectId("_id").toString() + "\ncount: " + count + "\n");
+			count++;
 		}
 	}
 
@@ -306,7 +308,7 @@ public class MongoToMongo {
 		return count;
 	}
 
-	private static void saveProgress(String[] remoteCollections, int colecaoID, Document remoteDoc, int count) {
+	private static void saveProgress(String[] remoteCollections, int colecaoID, Document remoteDoc, long count) {
 		try {
 			File file = new File(remote_db + "_" + remoteCollections[colecaoID] + "_" + local_db + localCollections[colecaoID] + "_savefile.txt");
 			// if file doesn't exist create it
@@ -327,14 +329,14 @@ public class MongoToMongo {
 					synchronized (MongoToMongo.class) {
 						removeLine.write(currentLine + System.getProperty("line.separator"));
 						appendLine.append(remote_db + ";" + remoteCollections[colecaoID] + ";"
-								+ Integer.toString(count - 1) + "\n");
+								+ Long.toString(count - 1) + "\n");
 					}
 					exists = true;
 				}
 			}
 			if (exists.equals(false)) {
 				appendLine.append(
-						remote_db + ";" + remoteCollections[colecaoID] + ";" + Integer.toString(count - 1) + "\n");
+						remote_db + ";" + remoteCollections[colecaoID] + ";" + Long.toString(count - 1) + "\n");
 			}
 			removeLine.close();
 			appendLine.close();
