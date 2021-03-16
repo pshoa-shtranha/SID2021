@@ -355,7 +355,7 @@ public class MongoToMongo {
 		System.out.println("Coleção local " + localCollections[colecaoID] + " limpa");
 		MongoToMongo.documentLabel.append("Coleção local " + localCollections[colecaoID] + " limpa\n");
 	}
-
+//
 //	private static void printDBNames(MongoClient localClient) {
 //		localClient.listDatabaseNames();
 //		MongoIterable<String> strings = localClient.listDatabaseNames();
