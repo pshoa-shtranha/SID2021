@@ -54,33 +54,14 @@ public class MongoToMongo {
 	static String[] localCollections = new String[1000];
 	static int numRemoteCollections;
 
-	private static void createWindow() {
-		documentLabel = new JTextArea("\n");
-		final JFrame frame = new JFrame("Mongo to Mongo");
-		frame.setDefaultCloseOperation(3);
-		final JLabel comp = new JLabel("Data from remote mongo: ", 0);
-		comp.setPreferredSize(new Dimension(600, 30));
-		final JScrollPane comp2 = new JScrollPane(MongoToMongo.documentLabel, 22, 32);
-		comp2.setPreferredSize(new Dimension(600, 200));
-		final JButton comp3 = new JButton("Stop the program");
-		frame.getContentPane().add(comp, "First");
-		frame.getContentPane().add(comp2, "Center");
-		frame.getContentPane().add(comp3, "Last");
-		frame.setLocationRelativeTo(null);
-		frame.pack();
-		frame.setVisible(true);
-		comp3.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(final ActionEvent actionEvent) {
-				System.exit(0);
-			}
-		});
-	}
+
 
 	public static void main(String[] args) {
 		// Desativar mensagens vermelhas irritantes
 		Logger.getLogger("org.mongodb.driver").setLevel(Level.WARNING);
 		createWindow();
+		
+		// carregar propriedades do .ini
 		try {
 			final Properties properties = new Properties();
 			properties.load(MongoToMongo.class.getResourceAsStream("/MongoToMongo.ini"));
@@ -107,7 +88,8 @@ public class MongoToMongo {
 			System.out.println("Error reading MongoToMongo.ini file " + e1);
 			JOptionPane.showMessageDialog(null, "The MongoToMongo inifile wasn't found.", "Mongo To Mongo", 0);
 		}
-
+			
+			//criar e iniciar Threads
 			Thread[] threads = new Thread[numRemoteCollections + 1];
 			MongoToMongo mongoToMongo = new MongoToMongo();
 			for (int i = 0; i < numRemoteCollections; i++) {
@@ -122,6 +104,30 @@ public class MongoToMongo {
 
 	}
 
+	private static void createWindow() {
+		documentLabel = new JTextArea("\n");
+		final JFrame frame = new JFrame("Mongo to Mongo");
+		frame.setDefaultCloseOperation(3);
+		final JLabel comp = new JLabel("Data from remote mongo: ", 0);
+		comp.setPreferredSize(new Dimension(600, 30));
+		final JScrollPane comp2 = new JScrollPane(MongoToMongo.documentLabel, 22, 32);
+		comp2.setPreferredSize(new Dimension(600, 200));
+		final JButton comp3 = new JButton("Stop the program");
+		frame.getContentPane().add(comp, "First");
+		frame.getContentPane().add(comp2, "Center");
+		frame.getContentPane().add(comp3, "Last");
+		frame.setLocationRelativeTo(null);
+		frame.pack();
+		frame.setVisible(true);
+		comp3.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(final ActionEvent actionEvent) {
+				System.exit(0);
+			}
+		});
+	}
+	
+	//lê quais são as coleções remotas a transferir do .ini
 	private static void readRemoteCollections(final Properties properties) {
 		String collectionName = "something";
 		numRemoteCollections = 0;
@@ -132,7 +138,8 @@ public class MongoToMongo {
 			collectionName = properties.getProperty("remote_collection" + Integer.toString(numRemoteCollections + 1));
 		}
 	}
-
+	
+	//lê quais são as coleções locais do .ini
 	private static void readLocalCollections(final Properties properties) {
 		String collectionName = "something";
 		for (int i = 0; i < numRemoteCollections; i++) {
@@ -145,6 +152,7 @@ public class MongoToMongo {
 		}
 	}
 
+	//inicia thread para cada conjunto coleção remota-local
 	public class incrementador extends Thread {
 
 		public int colecaoID;
@@ -161,6 +169,7 @@ public class MongoToMongo {
 		}
 	}
 
+	//coneta-se aos mongos remotos e locais e efetua a transferência dos ficheiros
 	private static void connectToMongos(int colecaoID) {
 		makeRemoteConnectionString();
 		makeLocalConnectionString();
@@ -173,19 +182,18 @@ public class MongoToMongo {
 			try {
 				MongoClient localClient;
 				synchronized (MongoToMongo.class) {
+					System.out.println("Thread " + Integer.toString(colecaoID + 1) + " connected to remote " + remoteCollections[colecaoID] + " and to local " + localCollections[colecaoID] + "\n");
 					localClient = MongoClients.create(connectionStringLocal);
 				}
-				MongoToMongo.documentLabel.append("Thread " + Integer.toString(colecaoID + 1) + " connected to remote "
-						+ remoteCollections[colecaoID] + " and to local " + localCollections[colecaoID] + "\n");
-//			printDBNames(localClient); printDBNames(remoteClient);
+				MongoToMongo.documentLabel.append("Thread " + Integer.toString(colecaoID + 1) + " connected to remote " + remoteCollections[colecaoID] + " and to local " + localCollections[colecaoID] + "\n");
 				MongoDatabase remotedb = remoteClient.getDatabase(remote_db);
 				MongoDatabase localdb = localClient.getDatabase(local_db);
 
-				// apagar documentos de coleções locais antes de iniciar a transferência
+				// apaga documentos de coleções locais antes de iniciar a transferência consoante o .ini
 				if (clear_local_collections_before_start.equals("true")) {
 					deleteDocsFromLocalCollection(localdb, colecaoID);
 				}
-
+				
 				transferDocs(remotedb, localdb, remoteCollections, localCollections, colecaoID);
 			} catch (Exception e) {
 				MongoToMongo.documentLabel.append("Nao foi possivel conectar ao servidor mongo local!\n");
@@ -196,6 +204,7 @@ public class MongoToMongo {
 
 	}
 
+	//cria a string usada para conetar-se ao servidor mongo remoto
 	private static void makeRemoteConnectionString() {
 		connectionStringRemote = "mongodb://";
 		if (remote_mongo_authentication.equals("true")) {
@@ -209,6 +218,7 @@ public class MongoToMongo {
 		}
 	}
 
+	//cria a string usada para conetar-se ao servidor mongo local
 	private static void makeLocalConnectionString() {
 		connectionStringLocal = "mongodb://";
 		if (local_mongo_authentication.equals("true")) {
@@ -231,6 +241,7 @@ public class MongoToMongo {
 		}
 	}
 
+	//transfere os documentos do mongo remoto para o mongo local
 	private static void transferDocs(MongoDatabase remotedb, MongoDatabase localdb, String[] remoteCollections,
 			String[] localCollections, int colecaoID) {
 		MongoCollection<Document> remoteCollection = remotedb.getCollection(remoteCollections[colecaoID]);
@@ -240,6 +251,7 @@ public class MongoToMongo {
 		int count = 0;
 		MongoCursor<Document> remoteDocCursor = remoteCollection.find().iterator();
 
+		//carrega o número de documentos a saltar no iteravel (em princípio já transferidos)
 		if (load_progress.equals("true") && !clear_local_collections_before_start.equals("true")) {
 			count = loadProgressFromFile(remoteCollections, colecaoID);
 			remoteDocCursor = remoteCollection.find().skip(count).iterator();
@@ -257,15 +269,19 @@ public class MongoToMongo {
 //					System.out.println("Inserted object with id " + remoteDoc.getObjectId("_id").toString() + " into "
 //							+ localCollections[colecaoID]);
 					if (count % 100 == 0) {
-						// saves progress every 100 documents
+						// guarda o número de documentos já transferidos a cada 100 documentos transferidos
 						saveProgress(remoteCollections, colecaoID, remoteDoc, localCollection.countDocuments());
 						MongoToMongo.documentLabel.append(localCollections[colecaoID] + " has " + localCollection.countDocuments() + " objects\n");
 						System.out.println(localCollections[colecaoID] + " has " + localCollection.countDocuments() + " objects\n");
 					}
+					count++;
+//					System.out.println("coleção: " + localCollections[colecaoID]  + "\nID:_" + remoteDoc.getObjectId("_id").toString() + "\ncount: " + count + "\n");
 				}
 			}
+			//já percorreu todos os documentos existentes, refaz iterável e dorme x segundos do .ini
 			try {
 				System.out.println("All objects in " + remoteCollections[colecaoID] + " transfered with success");
+				MongoToMongo.documentLabel.append("All objects in " + remoteCollections[colecaoID] + " transfered with success");
 				// reload cursor to account for new docs
 				remoteDocCursor.close();
 				count = loadProgressFromFile(remoteCollections, colecaoID);
@@ -275,11 +291,10 @@ public class MongoToMongo {
 				MongoToMongo.documentLabel.append(e.toString());
 				e.printStackTrace();
 			}
-			//System.out.println("coleção: " + localCollections[colecaoID]  + "\nID:_" + remoteDoc.getObjectId("_id").toString() + "\ncount: " + count + "\n");
-			count++;
 		}
 	}
 
+	//carrega numero de docs a saltar no iteravel de um ficheiro
 	private static int loadProgressFromFile(String[] remoteCollections, int colecaoID) {
 		int count = 0;
 		try {
@@ -292,8 +307,7 @@ public class MongoToMongo {
 					if (currentLine.contains(remote_db + ";" + remoteCollections[colecaoID])) {
 						String[] split = currentLine.split(";");
 						count = Integer.parseInt(split[2].trim());
-						//remoteDocCursor = remoteCollection.find().skip(Integer.parseInt(split[2].trim())).iterator();
-						System.out.println("skipped");
+						System.out.println("Progress loaded for " + remoteCollections[colecaoID] + "\n");
 						MongoToMongo.documentLabel.append("Progress loaded for " + remoteCollections[colecaoID] + "\n");
 					}
 				}
@@ -308,6 +322,7 @@ public class MongoToMongo {
 		return count;
 	}
 
+	//guarda numero de docs já transferidos para conjunto coleção remota-local
 	private static void saveProgress(String[] remoteCollections, int colecaoID, Document remoteDoc, long count) {
 		try {
 			File file = new File(remote_db + "_" + remoteCollections[colecaoID] + "_" + local_db + localCollections[colecaoID] + "_savefile.txt");
@@ -348,6 +363,7 @@ public class MongoToMongo {
 		}
 	}
 
+	//apaga todos os documentos da coleção local a que a thread está conetada
 	private static void deleteDocsFromLocalCollection(MongoDatabase localdb, int colecaoID) {
 		BasicDBObject query = new BasicDBObject();
 		MongoCollection<Document> localCollection = localdb.getCollection(localCollections[colecaoID]);
@@ -355,13 +371,4 @@ public class MongoToMongo {
 		System.out.println("Coleção local " + localCollections[colecaoID] + " limpa");
 		MongoToMongo.documentLabel.append("Coleção local " + localCollections[colecaoID] + " limpa\n");
 	}
-//
-//	private static void printDBNames(MongoClient localClient) {
-//		localClient.listDatabaseNames();
-//		MongoIterable<String> strings = localClient.listDatabaseNames();
-//		MongoCursor<String> cursor = strings.cursor();
-//		while (cursor.hasNext()) {
-//			System.out.println(cursor.next());
-//		}
-//	}
 }
