@@ -9,6 +9,9 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 import java.util.Random;
 
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPasswordField;
+
 import java.util.Properties;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -19,10 +22,16 @@ import java.io.IOException;
 
 import javax.swing.JButton;
 import javax.swing.JScrollPane;
+
+import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.GridLayout;
+
 import javax.swing.JLabel;
 import javax.swing.JFrame;
 import javax.swing.JTextArea;
+import javax.swing.JTextField;
+
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import java.sql.*;
@@ -43,9 +52,11 @@ public class CloudToMySQL implements MqttCallback {
 	static String server_local;
 	private static File myObj;
 	static boolean terminated = false;
-	
-	//FUNCAO ADICIONAL
-	//static boolean start = false;
+	static JPanel panel;
+	   static JLabel user_label, password_label, message;
+	   static JTextField userName_text;
+	   static JPasswordField password_text;
+	   static JButton submit, cancel;
 
 	private static void createWindow() {
 
@@ -63,6 +74,42 @@ public class CloudToMySQL implements MqttCallback {
 		frame.setLocationRelativeTo(null);
 		frame.pack();
 		frame.setVisible(true);
+		frame.addWindowListener(new java.awt.event.WindowAdapter() {
+		    @Override
+		    public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+		        
+		    	terminated = true;
+				System.out.println("O programa foi fechado pelo utilizador!");
+				CloudToMySQL.documentLabel.append("O programa foi fechado pelo utilizador!" + "\n");
+				Date date = new Date();
+		        Timestamp ts=new Timestamp(date.getTime());
+		       
+		        try {
+		        	BufferedWriter appendLine = new BufferedWriter(new FileWriter(myObj, true));
+					appendLine.append("O programa foi fechado pelo utilizador " + ts + "\n");
+					appendLine.close();
+					try {
+						final MqttMessage mqttMessage = new MqttMessage();
+						String s = "STOP";
+						mqttMessage.setPayload(s.getBytes());
+						CloudToMySQL.mqttclient.publish(CloudToMySQL.cloud_topic, mqttMessage);
+						
+						try {
+							Thread.sleep(1000);
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					} catch (MqttException e) {
+						e.printStackTrace();
+					}
+					System.exit(0);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+		    }
+		});
 		comp2.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(final ActionEvent actionEvent) {
@@ -81,6 +128,13 @@ public class CloudToMySQL implements MqttCallback {
 						String s = "STOP";
 						mqttMessage.setPayload(s.getBytes());
 						CloudToMySQL.mqttclient.publish(CloudToMySQL.cloud_topic, mqttMessage);
+						
+						try {
+							Thread.sleep(1000);
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
 					} catch (MqttException e) {
 						e.printStackTrace();
 					}
@@ -92,8 +146,45 @@ public class CloudToMySQL implements MqttCallback {
 			}
 		});
 	}
-
-	public static void main(final String[] array) {
+	
+	public static void firstWindow() {
+		
+		final JFrame frame2 = new JFrame("Cloud To MySQL");
+		// Username Label
+	      user_label = new JLabel();
+	      user_label.setText("Username do MySQL:");
+	      userName_text = new JTextField();
+	      // Password Label
+	      password_label = new JLabel();
+	      password_label.setText("Password:");
+	      password_text = new JPasswordField();
+	      // Submit
+	      submit = new JButton("SUBMIT");
+	      panel = new JPanel(new GridLayout(3, 1));
+	      panel.add(user_label);
+	      panel.add(userName_text);
+	      panel.add(password_label);
+	      panel.add(password_text);
+	      message = new JLabel();
+	      panel.add(message);
+	      panel.add(submit);
+	      frame2.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+	      // Adding the listeners to components..
+	      submit.addActionListener(new ActionListener() {
+	    	  @Override
+				public void actionPerformed(final ActionEvent actionEvent) {
+	    	  CloudToMySQL.user = userName_text.getText();
+	          CloudToMySQL.password = password_text.getText();
+	          comeca();
+	    	  }
+	      });
+	      frame2.add(panel, BorderLayout.CENTER);
+	      frame2.setTitle("Cloud To MySQL");
+	      frame2.setLocationRelativeTo(null);
+	      frame2.setSize(450,150);
+	      frame2.setVisible(true);
+	}
+	public static void comeca() {
 		
 		try {
 		      myObj = new File("erros_de_ligacao_cloudtomysql.txt");
@@ -126,6 +217,7 @@ public class CloudToMySQL implements MqttCallback {
 			
 		} catch (Exception e) {
 			System.out.println("Nao foi possivel carregar o driver do mysql!");
+			e.printStackTrace();
 			Date date = new Date();
 	        Timestamp ts=new Timestamp(date.getTime());
 	       
@@ -149,8 +241,8 @@ public class CloudToMySQL implements MqttCallback {
 			properties.load(CloudToMySQL.class.getResourceAsStream("/CloudToMySQL.ini"));
 			CloudToMySQL.cloud_server = properties.getProperty("cloud_server");
 			CloudToMySQL.cloud_topic = properties.getProperty("cloud_topic");
-			CloudToMySQL.user = properties.getProperty("user");
-			CloudToMySQL.password = properties.getProperty("password");
+			//CloudToMySQL.user = properties.getProperty("user");
+			//CloudToMySQL.password = properties.getProperty("password");
 			CloudToMySQL.delete_many = properties.getProperty("delete_many");
 			CloudToMySQL.server_local = properties.getProperty("server_local");
 
@@ -189,8 +281,7 @@ public class CloudToMySQL implements MqttCallback {
 
 		} catch (SQLException ex) {
 
-			System.out.println("Nao foi possivel ligar ao servidor MySQL!");
-			System.out.println("Verifique as ligacoes e reinicie o programa!");
+			System.out.println("Nao foi possivel ligar ao servidor MySQL. Verifique as ligacoes e credenciais!");
 			CloudToMySQL.documentLabel.append("Nao foi possivel ligar ao servidor MySQL!" + "\n");
 			CloudToMySQL.documentLabel.append("Verifique as ligacoes e reinicie o programa!" + "\n");
 			Date date = new Date();
@@ -198,7 +289,7 @@ public class CloudToMySQL implements MqttCallback {
 	       
 	        try {
 	        	BufferedWriter appendLine = new BufferedWriter(new FileWriter(myObj, true));
-				appendLine.append("Nao foi possivel ligar ao servidor MySQL " + ts + "\n");
+				appendLine.append("Nao foi possivel ligar ao servidor MySQL. Verifique as ligacoes e credenciais " + ts + "\n");
 				appendLine.close();
 				
 				System.exit(0);
@@ -211,25 +302,11 @@ public class CloudToMySQL implements MqttCallback {
 		
 		createWindow();
 		deleteAllEntriesInMySQL();
+	}
+
+	public static void main(final String[] array) {
 		
-		//FUNCAO ADICIONAL
-		/*while(!start) {
-			try {
-				System.out.println("vou esperar");
-				Thread.sleep(2000);
-			} catch (InterruptedException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
-		try {
-			final MqttMessage mqttMessage = new MqttMessage();
-			String s = "START";
-			mqttMessage.setPayload(s.getBytes());
-			CloudToMySQL.mqttclient.publish(CloudToMySQL.cloud_topic, mqttMessage);
-		} catch (MqttException e) {
-			e.printStackTrace();
-		}
-		}*/
+		firstWindow();
 	}
 	
 	public static void deleteAllEntriesInMySQL() {
@@ -307,12 +384,6 @@ public class CloudToMySQL implements MqttCallback {
 		
 		//metodo que e executado quando chega uma mensagem do servidor MQTT
 		
-		//FUNCAO ADICIONAL
-		/*if(mqttMessage.toString().equals("START")) {
-			
-			CloudToMySQL.start = true;
-		} else {
-			*/
 		try {
 			
 			processJson(mqttMessage.toString());
@@ -357,6 +428,7 @@ public class CloudToMySQL implements MqttCallback {
         	BufferedWriter appendLine = new BufferedWriter(new FileWriter(myObj, true));
 			appendLine.append("Houve perda de ligacao com o servidor broker " + ts + "\n");
 			appendLine.close();
+			System.exit(0);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -382,6 +454,20 @@ public class CloudToMySQL implements MqttCallback {
 		String sensor = register.getString("Sensor");
 		
 		String timestamp = register.getString("Data");
+		StringBuilder b = new StringBuilder();
+		if(timestamp.contains("GMT")) {
+			String[] a = timestamp.split(" ");
+			b.append(a[0]);
+			b.append(" ");
+			b.append(a[2]);
+		} else {
+			String[] a = timestamp.split("T");
+			b.append(a[0]);
+			b.append(" ");
+			String[] c = a[1].split("Z");
+			b.append(c[0]);
+			
+		}
 		double measure = register.getDouble("Medicao");
 		
 		String IDZona;
@@ -419,7 +505,7 @@ public class CloudToMySQL implements MqttCallback {
 			}
 			
 			int Zona2 = Integer.parseInt(IDZona);
-			String query = "INSERT INTO medicao (Zona, Tipo, IDSensor, Hora, Leitura, valid) " + "VALUES ( '" + Zona2 + "', '" + Tipo + "', " + sensorID + ", '" + timestamp + "', '" + measure + "', " + 1 + ")";
+			String query = "INSERT INTO medicao (Zona, Tipo, IDSensor, Hora, Leitura, valid) " + "VALUES ( '" + Zona2 + "', '" + Tipo + "', " + sensorID + ", '" + b.toString() + "', '" + measure + "', " + 1 + ")";
 			Statement stmt = connect.createStatement();
 			System.out.println("Executing Query: " + query);
 			stmt.executeUpdate(query);
@@ -446,6 +532,12 @@ public class CloudToMySQL implements MqttCallback {
 					String s = "STOP";
 					mqttMessage.setPayload(s.getBytes());
 					CloudToMySQL.mqttclient.publish(CloudToMySQL.cloud_topic, mqttMessage);
+					try {
+						Thread.sleep(1000);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 				} catch (MqttException e) {
 					e.printStackTrace();
 				}
@@ -461,8 +553,8 @@ public class CloudToMySQL implements MqttCallback {
 	static {
 		CloudToMySQL.cloud_server = new String();
 		CloudToMySQL.cloud_topic = new String();
-		CloudToMySQL.user = new String();
-		CloudToMySQL.password = new String();
+		//CloudToMySQL.user = new String();
+		//CloudToMySQL.password = new String();
 		CloudToMySQL.documentLabel = new JTextArea("\n");
 		CloudToMySQL.delete_many = new String();
 		CloudToMySQL.server_local = new String();

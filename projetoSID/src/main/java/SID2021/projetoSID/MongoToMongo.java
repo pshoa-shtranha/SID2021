@@ -1,6 +1,8 @@
 package SID2021.projetoSID;
 
+import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedReader;
@@ -9,6 +11,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.sql.Timestamp;
+import java.util.Date;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -17,8 +21,11 @@ import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPasswordField;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
+import javax.swing.JTextField;
 
 import org.bson.Document;
 
@@ -28,7 +35,8 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
-//hey
+import com.mongodb.client.model.Filters;
+
 public class MongoToMongo {
 	static String remote_mongo_address;
 	static String remote_mongo_authentication;
@@ -53,56 +61,16 @@ public class MongoToMongo {
 	static String[] remoteCollections = new String[1000];
 	static String[] localCollections = new String[1000];
 	static int numRemoteCollections;
-
-
-
-	public static void main(String[] args) {
-		// Desativar mensagens vermelhas irritantes
-		Logger.getLogger("org.mongodb.driver").setLevel(Level.WARNING);
-		createWindow();
-		
-		// carregar propriedades do .ini
-		try {
-			final Properties properties = new Properties();
-			properties.load(MongoToMongo.class.getResourceAsStream("/MongoToMongo.ini"));
-
-			MongoToMongo.remote_mongo_address = properties.getProperty("remote_mongo_address");
-			MongoToMongo.remote_mongo_authentication = properties.getProperty("remote_mongo_authentication");
-			MongoToMongo.remote_mongo_user = properties.getProperty("remote_mongo_user");
-			MongoToMongo.remote_mongo_password = properties.getProperty("remote_mongo_password");
-			MongoToMongo.remote_db = properties.getProperty("remote_db");
-			MongoToMongo.local_replica_set = properties.getProperty("local_replica_set");
-			MongoToMongo.local_replica_name = properties.getProperty("local_replica_name");
-			MongoToMongo.local_mongo_address = properties.getProperty("local_mongo_address");
-			MongoToMongo.local_mongo_authentication = properties.getProperty("local_mongo_authentication");
-			MongoToMongo.local_mongo_user = properties.getProperty("local_mongo_user");
-			MongoToMongo.local_mongo_password = properties.getProperty("local_mongo_password");
-			MongoToMongo.local_db = properties.getProperty("local_db");
-			MongoToMongo.clear_local_collections_before_start = properties
-					.getProperty("clear_local_collections_before_start");
-			MongoToMongo.sleep_frequency_in_milliseconds = properties.getProperty("sleep_frequency_in_milliseconds");
-			MongoToMongo.load_progress = properties.getProperty("load_progress");
-			readRemoteCollections(properties);
-			readLocalCollections(properties);
-		} catch (Exception e1) {
-			System.out.println("Error reading MongoToMongo.ini file " + e1);
-			JOptionPane.showMessageDialog(null, "The MongoToMongo inifile wasn't found.", "Mongo To Mongo", 0);
-		}
-			
-			//criar e iniciar Threads
-			Thread[] threads = new Thread[numRemoteCollections + 1];
-			MongoToMongo mongoToMongo = new MongoToMongo();
-			for (int i = 0; i < numRemoteCollections; i++) {
-				threads[i] = mongoToMongo.new incrementador(i);
-				try {
-				threads[i].start();
-				} catch (Exception e) {
-					MongoToMongo.documentLabel.append("Nao foi possivel iniciar a Thread " + i + "\n");
-					System.out.println(e);
-				}
-			}
-
-	}
+	private static File myObj;
+	static JPanel panel;
+	   static JLabel user_label, password_label, user_label_remoto, password_label_remoto, message;
+	   static JTextField userName_text_local;
+	   static JPasswordField password_text_local;
+	   static JTextField userName_text_remoto;
+	   static JPasswordField password_text_remoto;
+	   static JButton submit, cancel;
+	   
+	   static Thread[] threads;
 
 	private static void createWindow() {
 		documentLabel = new JTextArea("\n");
@@ -119,15 +87,193 @@ public class MongoToMongo {
 		frame.setLocationRelativeTo(null);
 		frame.pack();
 		frame.setVisible(true);
+		frame.addWindowListener(new java.awt.event.WindowAdapter() {
+		    @Override
+		    public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+		        
+		    	System.out.println("O programa foi fechado pelo utilizador!");
+				MongoToCloud.documentLabel.append("O programa foi fechado pelo utilizador!" + "\n");
+				Date date = new Date();
+		        Timestamp ts=new Timestamp(date.getTime());
+		       
+		        try {
+		        	BufferedWriter appendLine = new BufferedWriter(new FileWriter(myObj, true));
+					appendLine.append("O programa foi fechado pelo utilizador " + ts + "\n");
+					appendLine.close();
+					//System.out.println(threads.length);
+					for(int i = 0; i < threads.length; i++) {
+						
+						threads[i].interrupt();
+						//REVISAO
+						System.out.println(((incrementador) threads[i]).getCount() + " stored for " + ((incrementador) threads[i]).getRemote()[i].toString());
+						saveProgress(((incrementador) threads[i]).getRemote(), ((incrementador) threads[i]).getID(), ((incrementador) threads[i]).getCount());
+					}
+				System.exit(0);
+		        } catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+		    }
+		});
 		comp3.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(final ActionEvent actionEvent) {
+				System.out.println("O programa foi fechado pelo utilizador!");
+				MongoToCloud.documentLabel.append("O programa foi fechado pelo utilizador!" + "\n");
+				Date date = new Date();
+		        Timestamp ts=new Timestamp(date.getTime());
+		       
+		        try {
+		        	BufferedWriter appendLine = new BufferedWriter(new FileWriter(myObj, true));
+					appendLine.append("O programa foi fechado pelo utilizador " + ts + "\n");
+					appendLine.close();
+					
+					for(int i = 0; i < threads.length; i++) {
+						
+						threads[i].interrupt();
+						System.out.println(((incrementador) threads[i]).getCount() + " stored for " + ((incrementador) threads[i]).getRemote()[i].toString());
+						saveProgress(((incrementador) threads[i]).getRemote(), ((incrementador) threads[i]).getID(), ((incrementador) threads[i]).getCount());
+					}
 				System.exit(0);
+		        } catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 		});
 	}
 	
-	//lê quais são as coleções remotas a transferir do .ini
+	public static void comeca() {
+		// Desativar mensagens vermelhas irritantes
+				try {
+				      myObj = new File("erros_de_ligacao_mongotomongo.txt");
+				     
+				      if (myObj.createNewFile()) {
+				        System.out.println("File created: " + myObj.getName());
+				       
+				      } else {
+				        System.out.println("File erros_de_ligacao already exists!");
+				        
+				      }
+				      
+				    } catch (IOException e) {
+				      System.out.println("Ocorreu um erro ao criar erros_de_ligacao");
+				      Date date = new Date();
+				      Timestamp ts=new Timestamp(date.getTime());
+				      try {
+				    	  BufferedWriter appendLine = new BufferedWriter(new FileWriter(myObj, true));
+				    	  appendLine.append("Ocorreu um erro ao criar erros_de_ligacao " + ts + "\n");
+				    	  appendLine.close();
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+				    }
+				Logger.getLogger("org.mongodb.driver").setLevel(Level.WARNING);
+				createWindow();
+				try {
+					final Properties properties = new Properties();
+					properties.load(MongoToMongo.class.getResourceAsStream("/MongoToMongo.ini"));
+
+					MongoToMongo.remote_mongo_address = properties.getProperty("remote_mongo_address");
+					MongoToMongo.remote_mongo_authentication = properties.getProperty("remote_mongo_authentication");
+					//MongoToMongo.remote_mongo_user = properties.getProperty("remote_mongo_user");
+					//MongoToMongo.remote_mongo_password = properties.getProperty("remote_mongo_password");
+					MongoToMongo.remote_db = properties.getProperty("remote_db");
+					MongoToMongo.local_replica_set = properties.getProperty("local_replica_set");
+					MongoToMongo.local_replica_name = properties.getProperty("local_replica_name");
+					MongoToMongo.local_mongo_address = properties.getProperty("local_mongo_address");
+					MongoToMongo.local_mongo_authentication = properties.getProperty("local_mongo_authentication");
+					//MongoToMongo.local_mongo_user = properties.getProperty("local_mongo_user");
+					//MongoToMongo.local_mongo_password = properties.getProperty("local_mongo_password");
+					MongoToMongo.local_db = properties.getProperty("local_db");
+					MongoToMongo.clear_local_collections_before_start = properties
+							.getProperty("clear_local_collections_before_start");
+					MongoToMongo.sleep_frequency_in_milliseconds = properties.getProperty("sleep_frequency_in_milliseconds");
+					MongoToMongo.load_progress = properties.getProperty("load_progress");
+					readRemoteCollections(properties);
+					readLocalCollections(properties);
+				} catch (Exception e1) {
+					System.out.println("Error reading MongoToMongo.ini file " + e1);
+					JOptionPane.showMessageDialog(null, "The MongoToMongo inifile wasn't found.", "Mongo To Mongo", 0);
+					Date date = new Date();
+				      Timestamp ts=new Timestamp(date.getTime());
+				      try {
+				    	  BufferedWriter appendLine = new BufferedWriter(new FileWriter(myObj, true));
+				    	  appendLine.append("Ocorreu um erro ao ler o ficheiro MongoToMongo.ini " + ts + "\n");
+				    	  appendLine.close();
+				    	  System.exit(0);
+					} catch (IOException e2) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+				}
+
+					threads = new Thread[numRemoteCollections];
+					MongoToMongo mongoToMongo = new MongoToMongo();
+					for (int i = 0; i < numRemoteCollections; i++) {
+						threads[i] = mongoToMongo.new incrementador(i, MongoToMongo.remoteCollections);
+						try {
+						threads[i].start();
+						} catch (Exception e) {
+							MongoToMongo.documentLabel.append("Nao foi possivel iniciar a Thread " + i + "\n");
+							System.out.println(e);
+						}
+					}
+	}
+
+	public static void main(String[] args) {
+		
+		final JFrame frame2 = new JFrame("Mongo To Mongo");
+		// Username Label
+	      user_label = new JLabel();
+	      user_label.setText("Username do Mongo Local:");
+	      userName_text_local = new JTextField();
+	      // Password Label
+	      password_label = new JLabel();
+	      password_label.setText("Password do Mongo Local:");
+	      password_text_local = new JPasswordField();
+	      user_label_remoto = new JLabel();
+	      user_label_remoto.setText("Username do Mongo Remoto:");
+	      userName_text_remoto = new JTextField();
+	      password_label_remoto = new JLabel();
+	      password_label_remoto.setText("Password do Mongo Remoto:");
+	      password_text_remoto = new JPasswordField();
+	      
+	      // Submit
+	      submit = new JButton("SUBMIT");
+	      panel = new JPanel(new GridLayout(5, 1));
+	      panel.add(user_label);
+	      panel.add(userName_text_local);
+	      panel.add(password_label);
+	      panel.add(password_text_local);
+	      panel.add(user_label_remoto);
+	      panel.add(userName_text_remoto);
+	      panel.add(password_label_remoto);
+	      panel.add(password_text_remoto);
+	      message = new JLabel();
+	      panel.add(message);
+	      panel.add(submit);
+	      frame2.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+	      // Adding the listeners to components..
+	      submit.addActionListener(new ActionListener() {
+	    	  @Override
+				public void actionPerformed(final ActionEvent actionEvent) {
+	    	  MongoToMongo.local_mongo_user = userName_text_local.getText();
+	          MongoToMongo.local_mongo_password = password_text_local.getText();
+	          MongoToMongo.remote_mongo_user = userName_text_remoto.getText();
+	          MongoToMongo.remote_mongo_password = password_text_remoto.getText();
+	          comeca();
+	    	  }
+	      });
+	      frame2.add(panel, BorderLayout.CENTER);
+	      frame2.setTitle("Mongo To Mongo");
+	      frame2.setLocationRelativeTo(null);
+	      frame2.setSize(450,150);
+	      frame2.setVisible(true);
+
+	}
+
 	private static void readRemoteCollections(final Properties properties) {
 		String collectionName = "something";
 		numRemoteCollections = 0;
@@ -138,73 +284,212 @@ public class MongoToMongo {
 			collectionName = properties.getProperty("remote_collection" + Integer.toString(numRemoteCollections + 1));
 		}
 	}
-	
-	//lê quais são as coleções locais do .ini
+
 	private static void readLocalCollections(final Properties properties) {
 		String collectionName = "something";
 		for (int i = 0; i < numRemoteCollections; i++) {
 			if (collectionName == null || collectionName.isEmpty()) {
-				System.out.println("number of local collections must be equal to number of remote collections");
-				System.exit(0);
+				System.out.println("O numero de colecoes locais tem de ser o mesmo que as colecoes remotas!");
+				JOptionPane.showMessageDialog(null, "O numero de colecoes locais tem de ser o mesmo que as colecoes remotas!");
+				Date date = new Date();
+			      Timestamp ts=new Timestamp(date.getTime());
+			      try {
+			    	  BufferedWriter appendLine = new BufferedWriter(new FileWriter(myObj, true));
+			    	  appendLine.append("O numero de colecoes locais tem de ser o mesmo que as colecoes remotas " + ts + "\n");
+			    	  appendLine.close();
+			    	  System.exit(0);
+				} catch (IOException e2) {
+					// TODO Auto-generated catch block
+					e2.printStackTrace();
+				}
 			}
 			collectionName = properties.getProperty("local_collection" + Integer.toString(i + 1));
 			localCollections[i] = collectionName;
 		}
 	}
 
-	//inicia thread para cada conjunto coleção remota-local
 	public class incrementador extends Thread {
 
 		public int colecaoID;
+		public String[] remoteCollections;
+		public int count;
 
-		incrementador(int colecaoID) {
+		incrementador(int colecaoID, String[] remoteCollections) {
 
 			this.colecaoID = colecaoID;
+			this.remoteCollections = remoteCollections;
 		}
 
 		public void run() {
 
-			new MongoToMongo();
-			MongoToMongo.connectToMongos(colecaoID);
+			//new MongoToMongo();
+			connectToMongos();
 		}
-	}
+		
+		public int getCount() {
+			
+			return this.count;
+		}
+		
+		public String[] getRemote() {
+			
+			return this.remoteCollections;
+		}
+		
+		public int getID() {
+			
+			return this.colecaoID;
+		}
+		
+		private void transferDocs(MongoDatabase remotedb, MongoDatabase localdb, String[] localCollections) {
+			MongoCollection<Document> remoteCollection = remotedb.getCollection(remoteCollections[colecaoID]);
+			MongoCollection<Document> localCollection = localdb.getCollection(localCollections[colecaoID]);
+//			System.out.println(remoteCollection.countDocuments());
+			int i = 0;
+			this.count = 0;
+			MongoCursor<Document> remoteDocCursor = remoteCollection.find().iterator();
 
-	//coneta-se aos mongos remotos e locais e efetua a transferência dos ficheiros
-	private static void connectToMongos(int colecaoID) {
-		makeRemoteConnectionString();
-		makeLocalConnectionString();
+			if (load_progress.equals("true")) {
+				remoteDocCursor = loadProgressFromFile(remoteCollections, colecaoID, remoteCollection, remoteDocCursor);
+				try {
+					File file = new File(remote_db + "_" + remoteCollections[colecaoID] + "_" + local_db + localCollections[colecaoID] + "_savefile.txt");
+					if (file.exists()) {
+						BufferedReader reader = new BufferedReader(new FileReader(file));
+						String currentLine;
 
-		try {
-			MongoClient remoteClient;
-			synchronized (MongoToMongo.class) {
-				remoteClient = MongoClients.create(connectionStringRemote);
+						while ((currentLine = reader.readLine()) != null) {
+							if (currentLine.contains(remote_db + ";" + remoteCollections[colecaoID])) {
+								String[] split = currentLine.split(";");
+								count = Integer.parseInt(split[2]);
+							}
+						}
+						reader.close();
+
+					}
+				} catch (IOException e) {
+					MongoToMongo.documentLabel
+							.append("Não foi possível carregar o progresso para " + remoteCollections[colecaoID] + "\n");
+					e.printStackTrace();
+					Date date = new Date();
+				      Timestamp ts=new Timestamp(date.getTime());
+				      try {
+				    	  BufferedWriter appendLine = new BufferedWriter(new FileWriter(myObj, true));
+				    	  appendLine.append("Nao foi possivel carregar o progresso para " + remoteCollections[colecaoID] + " " + ts + "\n");
+				    	  appendLine.close();
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+				}
 			}
 			try {
-				MongoClient localClient;
-				synchronized (MongoToMongo.class) {
-					System.out.println("Thread " + Integer.toString(colecaoID + 1) + " connected to remote " + remoteCollections[colecaoID] + " and to local " + localCollections[colecaoID] + "\n");
-					localClient = MongoClients.create(connectionStringLocal);
+			while (i == 0) {
+				while (remoteDocCursor.hasNext()) {
+					Document remoteDoc = remoteDocCursor.next();
+					// Verificar se já tem doc na db local
+					BasicDBObject queryDuplicates = new BasicDBObject();
+					queryDuplicates.put("_id", remoteDoc.getObjectId("_id"));
+					long duplicates = localCollection.count(queryDuplicates);
+					if (duplicates == 0) {
+						localCollection.insertOne(remoteDoc);
+//						System.out.println("Inserted object with id " + remoteDoc.getObjectId("_id").toString() + " into "
+//								+ localCollections[colecaoID]);
+						if (count % 100 == 0) {
+							// saves progress every 100 documents
+							saveProgress(remoteCollections, colecaoID, count);
+							MongoToMongo.documentLabel.append(localCollections[colecaoID] + " has "
+									+ localCollection.countDocuments() + " objects\n");
+						}
+					}
+					count++;
 				}
-				MongoToMongo.documentLabel.append("Thread " + Integer.toString(colecaoID + 1) + " connected to remote " + remoteCollections[colecaoID] + " and to local " + localCollections[colecaoID] + "\n");
-				MongoDatabase remotedb = remoteClient.getDatabase(remote_db);
-				MongoDatabase localdb = localClient.getDatabase(local_db);
-
-				// apaga documentos de coleções locais antes de iniciar a transferência consoante o .ini
-				if (clear_local_collections_before_start.equals("true")) {
-					deleteDocsFromLocalCollection(localdb, colecaoID);
+				try {
+					System.out.println("All objects in " + remoteCollections[colecaoID] + " transfered with success");
+					// reload cursor to account for new docs
+					remoteDocCursor.close();
+					remoteDocCursor = loadProgressFromFile(remoteCollections, colecaoID, remoteCollection, remoteDocCursor);
+					Thread.sleep(Integer.parseInt(sleep_frequency_in_milliseconds));
+				} catch (InterruptedException e) {
+					MongoToMongo.documentLabel.append(e.toString());
+					e.printStackTrace();
 				}
-				
-				transferDocs(remotedb, localdb, remoteCollections, localCollections, colecaoID);
-			} catch (Exception e) {
-				MongoToMongo.documentLabel.append("Nao foi possivel conectar ao servidor mongo local!\n");
 			}
-		} catch (Exception e) {
-			MongoToMongo.documentLabel.append("Nao foi possivel conectar ao servidor mongo remoto!\n");
+			} catch (Exception ex) {
+				Date date = new Date();
+		        Timestamp ts=new Timestamp(date.getTime());
+		        System.out.println("Nao foi possivel ligar ao mongo local ou a ligacao foi interrompida!");
+		        MongoToMongo.documentLabel.append("Nao foi possivel ligar ao mongo local ou a ligacao foi interrompida!" + "\n");
+		        try {
+		        	BufferedWriter appendLine = new BufferedWriter(new FileWriter(myObj, true));
+					appendLine.append("Nao foi possivel ligar ao mongo local ou a ligacao foi interrompida " + ts + "\n");
+					appendLine.close();
+					//saveProgress(remoteCollections, colecaoID, count);
+					System.exit(0);
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			}
 		}
+		
+		private void connectToMongos() {
+			makeRemoteConnectionString();
+			makeLocalConnectionString();
 
+			try {
+				MongoClient remoteClient;
+				synchronized (MongoToMongo.class) {
+					remoteClient = MongoClients.create(connectionStringRemote);
+				}
+				try {
+					MongoClient localClient;
+					synchronized (MongoToMongo.class) {
+						localClient = MongoClients.create(connectionStringLocal);
+					}
+					MongoToMongo.documentLabel.append("Thread " + Integer.toString(colecaoID + 1) + " connected to remote "
+							+ remoteCollections[colecaoID] + " and to local " + localCollections[colecaoID] + "\n");
+			//printDBNames(localClient); printDBNames(remoteClient);
+					MongoDatabase remotedb = remoteClient.getDatabase(remote_db);
+					MongoDatabase localdb = localClient.getDatabase(local_db);
+			
+					// apagar documentos de coleções locais antes de iniciar a transferência
+					if (clear_local_collections_before_start.equals("true")) {
+						deleteDocsFromLocalCollection(localdb, colecaoID);
+					}
+
+					transferDocs(remotedb, localdb, localCollections);
+				} catch (Exception e) {
+					MongoToMongo.documentLabel.append("Nao foi possivel conectar ao servidor mongo remoto!\n");
+					Date date = new Date();
+				      Timestamp ts=new Timestamp(date.getTime());
+				      try {
+				    	  BufferedWriter appendLine = new BufferedWriter(new FileWriter(myObj, true));
+				    	  appendLine.append("Nao foi possivel conectar ao servidor mongo remoto. Verifique a ligacao e credenciais " + ts + "\n");
+				    	  appendLine.close();
+				    	  System.exit(0);
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+				}
+			} catch (Exception e) {
+				MongoToMongo.documentLabel.append("Nao foi possivel conectar ao servidor mongo remoto!\n");
+				Date date = new Date();
+			      Timestamp ts=new Timestamp(date.getTime());
+			      try {
+			    	  BufferedWriter appendLine = new BufferedWriter(new FileWriter(myObj, true));
+			    	  appendLine.append("Nao foi possivel conectar ao servidor mongo remoto. Verifique a ligacao e credenciais " + ts + "\n");
+			    	  appendLine.close();
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			}
+
+		}
+		
 	}
 
-	//cria a string usada para conetar-se ao servidor mongo remoto
 	private static void makeRemoteConnectionString() {
 		connectionStringRemote = "mongodb://";
 		if (remote_mongo_authentication.equals("true")) {
@@ -218,7 +503,6 @@ public class MongoToMongo {
 		}
 	}
 
-	//cria a string usada para conetar-se ao servidor mongo local
 	private static void makeLocalConnectionString() {
 		connectionStringLocal = "mongodb://";
 		if (local_mongo_authentication.equals("true")) {
@@ -241,62 +525,8 @@ public class MongoToMongo {
 		}
 	}
 
-	//transfere os documentos do mongo remoto para o mongo local
-	private static void transferDocs(MongoDatabase remotedb, MongoDatabase localdb, String[] remoteCollections,
-			String[] localCollections, int colecaoID) {
-		MongoCollection<Document> remoteCollection = remotedb.getCollection(remoteCollections[colecaoID]);
-		MongoCollection<Document> localCollection = localdb.getCollection(localCollections[colecaoID]);
-//		System.out.println(remoteCollection.countDocuments());
-		int i = 0;
-		int count = 0;
-		MongoCursor<Document> remoteDocCursor = remoteCollection.find().iterator();
-
-		//carrega o número de documentos a saltar no iteravel (em princípio já transferidos)
-		if (load_progress.equals("true") && !clear_local_collections_before_start.equals("true")) {
-			count = loadProgressFromFile(remoteCollections, colecaoID);
-			remoteDocCursor = remoteCollection.find().skip(count).iterator();
-		}
-
-		while (i == 0) {
-			while (remoteDocCursor.hasNext()) {
-				Document remoteDoc = remoteDocCursor.next();
-				// Verificar se já tem doc na db local
-				BasicDBObject queryDuplicates = new BasicDBObject();
-				queryDuplicates.put("_id", remoteDoc.getObjectId("_id"));
-				long duplicates = localCollection.count(queryDuplicates);
-				if (duplicates == 0) {
-					localCollection.insertOne(remoteDoc);
-//					System.out.println("Inserted object with id " + remoteDoc.getObjectId("_id").toString() + " into "
-//							+ localCollections[colecaoID]);
-					if (count % 100 == 0) {
-						// guarda o número de documentos já transferidos a cada 100 documentos transferidos
-						saveProgress(remoteCollections, colecaoID, remoteDoc, localCollection.countDocuments());
-						MongoToMongo.documentLabel.append(localCollections[colecaoID] + " has " + localCollection.countDocuments() + " objects\n");
-						System.out.println(localCollections[colecaoID] + " has " + localCollection.countDocuments() + " objects\n");
-					}
-					count++;
-//					System.out.println("coleção: " + localCollections[colecaoID]  + "\nID:_" + remoteDoc.getObjectId("_id").toString() + "\ncount: " + count + "\n");
-				}
-			}
-			//já percorreu todos os documentos existentes, refaz iterável e dorme x segundos do .ini
-			try {
-				System.out.println("All objects in " + remoteCollections[colecaoID] + " transfered with success");
-				MongoToMongo.documentLabel.append("All objects in " + remoteCollections[colecaoID] + " transfered with success");
-				// reload cursor to account for new docs
-				remoteDocCursor.close();
-				count = loadProgressFromFile(remoteCollections, colecaoID);
-				remoteDocCursor = remoteCollection.find().skip(count).iterator();
-				Thread.sleep(Integer.parseInt(sleep_frequency_in_milliseconds));
-			} catch (InterruptedException e) {
-				MongoToMongo.documentLabel.append(e.toString());
-				e.printStackTrace();
-			}
-		}
-	}
-
-	//carrega numero de docs a saltar no iteravel de um ficheiro
-	private static int loadProgressFromFile(String[] remoteCollections, int colecaoID) {
-		int count = 0;
+	private static MongoCursor<Document> loadProgressFromFile(String[] remoteCollections, int colecaoID,
+			MongoCollection<Document> remoteCollection, MongoCursor<Document> remoteDocCursor) {
 		try {
 			File file = new File(remote_db + "_" + remoteCollections[colecaoID] + "_" + local_db + localCollections[colecaoID] + "_savefile.txt");
 			if (file.exists()) {
@@ -306,8 +536,8 @@ public class MongoToMongo {
 				while ((currentLine = reader.readLine()) != null) {
 					if (currentLine.contains(remote_db + ";" + remoteCollections[colecaoID])) {
 						String[] split = currentLine.split(";");
-						count = Integer.parseInt(split[2].trim());
-						System.out.println("Progress loaded for " + remoteCollections[colecaoID] + "\n");
+						remoteDocCursor = remoteCollection.find().skip(Integer.parseInt(split[2].trim())).iterator();
+						System.out.println("skipped");
 						MongoToMongo.documentLabel.append("Progress loaded for " + remoteCollections[colecaoID] + "\n");
 					}
 				}
@@ -318,12 +548,21 @@ public class MongoToMongo {
 			MongoToMongo.documentLabel
 					.append("Não foi possível carregar o progresso para " + remoteCollections[colecaoID] + "\n");
 			e.printStackTrace();
+			Date date = new Date();
+		      Timestamp ts=new Timestamp(date.getTime());
+		      try {
+		    	  BufferedWriter appendLine = new BufferedWriter(new FileWriter(myObj, true));
+		    	  appendLine.append("Nao foi possivel carregar o progresso para " + remoteCollections[colecaoID] + " " + ts + "\n");
+		    	  appendLine.close();
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
 		}
-		return count;
+		return remoteDocCursor;
 	}
 
-	//guarda numero de docs já transferidos para conjunto coleção remota-local
-	private static void saveProgress(String[] remoteCollections, int colecaoID, Document remoteDoc, long count) {
+	private static void saveProgress(String[] remoteCollections, int colecaoID, int count) {
 		try {
 			File file = new File(remote_db + "_" + remoteCollections[colecaoID] + "_" + local_db + localCollections[colecaoID] + "_savefile.txt");
 			// if file doesn't exist create it
@@ -344,14 +583,14 @@ public class MongoToMongo {
 					synchronized (MongoToMongo.class) {
 						removeLine.write(currentLine + System.getProperty("line.separator"));
 						appendLine.append(remote_db + ";" + remoteCollections[colecaoID] + ";"
-								+ Long.toString(count - 1) + "\n");
+								+ Integer.toString(count - 1) + "\n");
 					}
 					exists = true;
 				}
 			}
 			if (exists.equals(false)) {
 				appendLine.append(
-						remote_db + ";" + remoteCollections[colecaoID] + ";" + Long.toString(count - 1) + "\n");
+						remote_db + ";" + remoteCollections[colecaoID] + ";" + Integer.toString(count - 1) + "\n");
 			}
 			removeLine.close();
 			appendLine.close();
@@ -360,10 +599,19 @@ public class MongoToMongo {
 			MongoToMongo.documentLabel
 					.append("Nao foi possivel guardar o progresso para " + remoteCollections[colecaoID] + "\n");
 			e.printStackTrace();
+			Date date = new Date();
+		      Timestamp ts=new Timestamp(date.getTime());
+		      try {
+		    	  BufferedWriter appendLine = new BufferedWriter(new FileWriter(myObj, true));
+		    	  appendLine.append("Nao foi possivel guardar o progresso para " + remoteCollections[colecaoID] + " " + ts + "\n");
+		    	  appendLine.close();
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
 		}
 	}
 
-	//apaga todos os documentos da coleção local a que a thread está conetada
 	private static void deleteDocsFromLocalCollection(MongoDatabase localdb, int colecaoID) {
 		BasicDBObject query = new BasicDBObject();
 		MongoCollection<Document> localCollection = localdb.getCollection(localCollections[colecaoID]);
@@ -371,4 +619,5 @@ public class MongoToMongo {
 		System.out.println("Coleção local " + localCollections[colecaoID] + " limpa");
 		MongoToMongo.documentLabel.append("Coleção local " + localCollections[colecaoID] + " limpa\n");
 	}
+
 }

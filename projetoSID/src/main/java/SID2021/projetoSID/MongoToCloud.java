@@ -12,13 +12,20 @@ import org.bson.conversions.Bson;
 import java.util.Date;
 import org.bson.Document;
 import com.mongodb.MongoClient;
+import com.mongodb.MongoClientOptions;
+import com.mongodb.MongoClientOptions.Builder;
 import com.mongodb.MongoClientURI;
+import com.mongodb.MongoSecurityException;
+
 import java.text.SimpleDateFormat;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPasswordField;
+
 import java.util.Properties;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -32,10 +39,16 @@ import java.sql.Timestamp;
 
 import javax.swing.JButton;
 import javax.swing.JScrollPane;
+
+import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.GridLayout;
+
 import javax.swing.JLabel;
 import javax.swing.JFrame;
 import javax.swing.JTextArea;
+import javax.swing.JTextField;
+
 import com.mongodb.DBCollection;
 import com.mongodb.DBObject;
 
@@ -75,6 +88,11 @@ public class MongoToCloud implements MqttCallback {
 	static boolean terminated = false;
 	static String progress_saving;
 	static Thread[] varias;
+	static JPanel panel;
+	   static JLabel user_label, password_label, message;
+	   static JTextField userName_text;
+	   static JPasswordField password_text;
+	   static JButton submit, cancel;
 	
 	private static void createWindow() {
 		
@@ -92,6 +110,41 @@ public class MongoToCloud implements MqttCallback {
 		frame.setLocationRelativeTo(null);
 		frame.pack();
 		frame.setVisible(true);
+		frame.addWindowListener(new java.awt.event.WindowAdapter() {
+		    @Override
+		    public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+		        
+		    	terminated = true;
+				System.out.println("O programa foi fechado pelo utilizador!");
+				MongoToCloud.documentLabel.append("O programa foi fechado pelo utilizador!" + "\n");
+				Date date = new Date();
+		        Timestamp ts=new Timestamp(date.getTime());
+		       
+		        try {
+		        	BufferedWriter appendLine = new BufferedWriter(new FileWriter(myObj, true));
+					appendLine.append("O programa foi fechado pelo utilizador " + ts + "\n");
+					appendLine.close();
+					
+					for(int i = 0; i < varias.length; i++) {
+						
+							//eliminar as medicoes ja transferidas entretanto
+						int x = (((incrementador) varias[i]).getCount() + 1) % Integer.parseInt(MongoToCloud.progress_saving);
+						((incrementador) MongoToCloud.varias[i]).getCollection().deleteMany(Filters.lte("_id", ((incrementador) varias[i]).getDocument().get("_id")));
+							System.out.println(x + " medicoes foram eliminadas da colecao " + ((incrementador) MongoToCloud.varias[i]).getColecao() + " ao fechar o programa!");
+						
+						saveProgress(database, ((incrementador) varias[i]).getCollection(), ((incrementador) MongoToCloud.varias[i]).getColecao(), ((incrementador) varias[i]).getCount());
+					}
+					
+					
+					
+					System.exit(0);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+		        
+		    }
+		});
 		comp3.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(final ActionEvent actionEvent) {
@@ -106,18 +159,12 @@ public class MongoToCloud implements MqttCallback {
 					appendLine.append("O programa foi fechado pelo utilizador " + ts + "\n");
 					appendLine.close();
 					
-					
-					//REVISAO
-					/*for(int i = 0; i < varias.length; i++) {
-						
-						varias[i].interrupt();
-					}*/
 					for(int i = 0; i < varias.length; i++) {
 						
 							//eliminar as medicoes ja transferidas entretanto
 						int x = (((incrementador) varias[i]).getCount() + 1) % Integer.parseInt(MongoToCloud.progress_saving);
-						//((incrementador) MongoToCloud.varias[i]).getCollection().deleteMany(Filters.lt("_id", ((incrementador) varias[i]).getDocument().get("_id")));
-							System.out.println(x + " medicoes foram eliminadas da colecao!");
+						((incrementador) MongoToCloud.varias[i]).getCollection().deleteMany(Filters.lte("_id", ((incrementador) varias[i]).getDocument().get("_id")));
+							System.out.println(x + " medicoes foram eliminadas da colecao " + ((incrementador) MongoToCloud.varias[i]).getColecao() + " ao fechar o programa!");
 						
 						saveProgress(database, ((incrementador) varias[i]).getCollection(), ((incrementador) MongoToCloud.varias[i]).getColecao(), ((incrementador) varias[i]).getCount());
 					}
@@ -132,8 +179,8 @@ public class MongoToCloud implements MqttCallback {
 			}
 		});
 	}
-
-	public static void main(final String[] array) {
+	
+	public static void comeca() {
 		
 		try {
 		      myObj = new File("erros_de_ligacao_mongotocloud.txt");
@@ -168,8 +215,8 @@ public class MongoToCloud implements MqttCallback {
 			properties.load(MongoToCloud.class.getResourceAsStream("/MongoToCloud.ini"));
 
 			MongoToCloud.mongo_address = properties.getProperty("mongo_address");
-			MongoToCloud.mongo_user = properties.getProperty("mongo_user");
-			MongoToCloud.mongo_password = properties.getProperty("mongo_password");
+			//MongoToCloud.mongo_user = properties.getProperty("mongo_user");
+			//MongoToCloud.mongo_password = properties.getProperty("mongo_password");
 			MongoToCloud.mongo_database = properties.getProperty("mongo_database");
 			MongoToCloud.mongo_collection1 = properties.getProperty("mongo_collection1");
 			MongoToCloud.mongo_collection2 = properties.getProperty("mongo_collection2");
@@ -225,12 +272,52 @@ public class MongoToCloud implements MqttCallback {
 			}
 		}
 	}
+
+	public static void main(final String[] array) {
+		
+		final JFrame frame2 = new JFrame("Mongo To Cloud");
+		// Username Label
+	      user_label = new JLabel();
+	      user_label.setText("Username do Mongo:");
+	      userName_text = new JTextField();
+	      // Password Label
+	      password_label = new JLabel();
+	      password_label.setText("Password:");
+	      password_text = new JPasswordField();
+	      // Submit
+	      submit = new JButton("SUBMIT");
+	      panel = new JPanel(new GridLayout(3, 1));
+	      panel.add(user_label);
+	      panel.add(userName_text);
+	      panel.add(password_label);
+	      panel.add(password_text);
+	      message = new JLabel();
+	      panel.add(message);
+	      panel.add(submit);
+	      frame2.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+	      // Adding the listeners to components..
+	      submit.addActionListener(new ActionListener() {
+	    	  @Override
+				public void actionPerformed(final ActionEvent actionEvent) {
+	    	  MongoToCloud.mongo_user = userName_text.getText();
+	          MongoToCloud.mongo_password = password_text.getText();
+	          comeca();
+	    	  }
+	      });
+	      frame2.add(panel, BorderLayout.CENTER);
+	      frame2.setTitle("Mongo To Cloud");
+	      frame2.setLocationRelativeTo(null);
+	      frame2.setSize(450,150);
+	      frame2.setVisible(true);
+	}
 	
 	public void createDatabase(String str) {
 		
 		//conexao ao mongo
 		try {
-		database = new MongoClient(new MongoClientURI(str)).getDatabase(MongoToCloud.mongo_database);
+		database = new MongoClient(new MongoClientURI(str)).getDatabase(MongoToCloud.mongo_database); 
+
+		
 		MongoToCloud.documentLabel.append("Conexao ao servidor mongo estabelecida!\n");
 		System.out.println("Conexao ao servidor mongo estabelecida!");
 		
@@ -244,6 +331,7 @@ public class MongoToCloud implements MqttCallback {
 	        	BufferedWriter appendLine = new BufferedWriter(new FileWriter(myObj, true));
 				appendLine.append("Nao foi possivel conectar ao servidor mongo " + ts + "\n");
 				appendLine.close();
+				System.exit(0);
 			} catch (IOException e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
@@ -322,9 +410,28 @@ public class MongoToCloud implements MqttCallback {
 			//para nao dar erro caso haja menos documentos na colecao ao iniciar a aplicacao
 			//se for este o caso, comeca a enviar os objetos a partir do inicio
 			int numberDocumentsUpdated = -1;
-		
-			
-			MongoCursor<Document> find = collection.find().iterator();
+			MongoCursor<Document> find = null;
+			try {
+			find = collection.find().iterator();
+			} catch (MongoSecurityException g) {
+				System.out.println("verifique as credenciais do mongo!");
+				MongoToCloud.documentLabel
+				.append("Verifique as credenciais do mongo!\n");
+				Date date = new Date();
+				Timestamp ts=new Timestamp(date.getTime());
+				
+				try {
+					BufferedWriter appendLine = new BufferedWriter(new FileWriter(myObj, true));
+					appendLine.append("Verifique as credenciais do mongo " + ts + "\n");
+					appendLine.close();
+					System.exit(0);
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+        
+        
+			}
 			try {
 				File file = new File(colecao + "_savefile.txt");
 				if (file.exists()) {
@@ -351,6 +458,7 @@ public class MongoToCloud implements MqttCallback {
 		        	BufferedWriter appendLine = new BufferedWriter(new FileWriter(myObj, true));
 					appendLine.append("Nao foi possivel carregar o progresso a partir do ficheiro " + ts + "\n");
 					appendLine.close();
+					System.exit(0);
 				} catch (IOException e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
@@ -399,12 +507,11 @@ public class MongoToCloud implements MqttCallback {
 						
 					}
 					
-					//REVISAO
 					if ((count + 1) % Integer.parseInt(MongoToCloud.progress_saving) == 0 && count > 0) {
 						
 						saveProgress(database, collection, colecao, count);
 							//eliminar as 30 primeiras medicoes na colecao
-						//collection.deleteMany(Filters.lt("_id", document3.get("_id")));
+						collection.deleteMany(Filters.lte("_id", document3.get("_id")));
 						System.out.println(MongoToCloud.progress_saving + " medicoes foram eliminadas da colecao " + colecao);
 						break;
 						
@@ -427,10 +534,12 @@ public class MongoToCloud implements MqttCallback {
 		        Timestamp ts=new Timestamp(date.getTime());
 		        System.out.println("A ligacao com o mongo foi interrompida!");
 		        MongoToCloud.documentLabel.append("A ligacao com o mongo foi interrompida!" + "\n");
+		        
 		        try {
 		        	BufferedWriter appendLine = new BufferedWriter(new FileWriter(myObj, true));
 					appendLine.append("A ligacao com o mongo foi interrompida " + ts + "\n");
 					appendLine.close();
+					saveProgress(database, collection, colecao, count);
 					System.exit(0);
 				} catch (IOException e1) {
 					// TODO Auto-generated catch block
@@ -471,6 +580,7 @@ public class MongoToCloud implements MqttCallback {
 	        	BufferedWriter appendLine = new BufferedWriter(new FileWriter(myObj, true));
 				appendLine.append("Nao foi possivel estabelecer ligacao ao servidor broker " + ts + "\n");
 				appendLine.close();
+				System.exit(0);
 			} catch (IOException e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
@@ -502,6 +612,16 @@ public class MongoToCloud implements MqttCallback {
 
 	public void connectionLost(final Throwable t) {
 		
+			
+			for(int i = 0; i < varias.length; i++) {
+				
+					//eliminar as medicoes ja transferidas entretanto
+				int x = (((incrementador) varias[i]).getCount() + 1) % Integer.parseInt(MongoToCloud.progress_saving);
+				((incrementador) MongoToCloud.varias[i]).getCollection().deleteMany(Filters.lte("_id", ((incrementador) varias[i]).getDocument().get("_id")));
+					System.out.println(x + " medicoes foram eliminadas da colecao " + ((incrementador) MongoToCloud.varias[i]).getColecao() + " ao fechar o programa!");
+				
+				saveProgress(database, ((incrementador) varias[i]).getCollection(), ((incrementador) MongoToCloud.varias[i]).getColecao(), ((incrementador) varias[i]).getCount());
+			}
 		//o que fazer quando a ligacao ao servidor e perdida
 		MongoToCloud.documentLabel.append("A ligacao ao servidor broker foi interrompida!\n");
 		System.out.println("A ligacao ao servidor broker foi interrompida!");
@@ -512,6 +632,7 @@ public class MongoToCloud implements MqttCallback {
         	BufferedWriter appendLine = new BufferedWriter(new FileWriter(myObj, true));
 			appendLine.append("A ligacao ao servidor broker foi interrompida " + ts + "\n");
 			appendLine.close();
+			System.exit(0);
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
@@ -540,17 +661,13 @@ public class MongoToCloud implements MqttCallback {
 				System.out.println("O programa terminou devido ao fecho do programa do pc2 ou de um problema de ligacao com o mysql!");
 				appendLine.close();
 				
-					//interromper as threads
-				/*for(int i = 0; i < varias.length; i++) {
-					
-					varias[i].interrupt();
-				}*/
 					for(int i = 0; i < varias.length; i++) {
 						
 					//eliminar as medicoes ja transferidas entretanto
 						int x = (((incrementador) varias[i]).getCount() + 1) % Integer.parseInt(MongoToCloud.progress_saving);
-						//((incrementador) MongoToCloud.varias[i]).getCollection().deleteMany(Filters.lt("_id", ((incrementador) varias[i]).getDocument().get("_id")));
-						System.out.println(x + " medicoes foram eliminadas da colecao!");
+						((incrementador) MongoToCloud.varias[i]).getCollection().deleteMany(Filters.lte("_id", ((incrementador) varias[i]).getDocument().get("_id")));
+					
+						System.out.println(x + " medicoes foram eliminadas da colecao " + ((incrementador) MongoToCloud.varias[i]).getColecao() + " ao fechar o programa!");
 				
 						saveProgress(database, ((incrementador) varias[i]).getCollection(), ((incrementador) MongoToCloud.varias[i]).getColecao(), ((incrementador) varias[i]).getCount());
 					}
