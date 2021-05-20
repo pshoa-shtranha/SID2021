@@ -92,7 +92,7 @@ public class MongoToMongo {
 		    public void windowClosing(java.awt.event.WindowEvent windowEvent) {
 		        
 		    	System.out.println("O programa foi fechado pelo utilizador!");
-				MongoToCloud.documentLabel.append("O programa foi fechado pelo utilizador!" + "\n");
+				MongoToMongo.documentLabel.append("O programa foi fechado pelo utilizador!" + "\n");
 				Date date = new Date();
 		        Timestamp ts=new Timestamp(date.getTime());
 		       
@@ -119,7 +119,7 @@ public class MongoToMongo {
 			@Override
 			public void actionPerformed(final ActionEvent actionEvent) {
 				System.out.println("O programa foi fechado pelo utilizador!");
-				MongoToCloud.documentLabel.append("O programa foi fechado pelo utilizador!" + "\n");
+				MongoToMongo.documentLabel.append("O programa foi fechado pelo utilizador!" + "\n");
 				Date date = new Date();
 		        Timestamp ts=new Timestamp(date.getTime());
 		       

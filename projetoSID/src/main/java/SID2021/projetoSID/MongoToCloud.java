@@ -128,13 +128,15 @@ public class MongoToCloud implements MqttCallback {
 					for(int i = 0; i < varias.length; i++) {
 						
 							//eliminar as medicoes ja transferidas entretanto
+						if(((incrementador) varias[i]).getDocument() != null) {
 						int x = (((incrementador) varias[i]).getCount() + 1) % Integer.parseInt(MongoToCloud.progress_saving);
 						((incrementador) MongoToCloud.varias[i]).getCollection().deleteMany(Filters.lte("_id", ((incrementador) varias[i]).getDocument().get("_id")));
 							System.out.println(x + " medicoes foram eliminadas da colecao " + ((incrementador) MongoToCloud.varias[i]).getColecao() + " ao fechar o programa!");
 						
 						saveProgress(database, ((incrementador) varias[i]).getCollection(), ((incrementador) MongoToCloud.varias[i]).getColecao(), ((incrementador) varias[i]).getCount());
-					}
 					
+						}
+					}
 					
 					
 					System.exit(0);
@@ -162,13 +164,14 @@ public class MongoToCloud implements MqttCallback {
 					for(int i = 0; i < varias.length; i++) {
 						
 							//eliminar as medicoes ja transferidas entretanto
+						if(((incrementador) varias[i]).getDocument() != null) {
 						int x = (((incrementador) varias[i]).getCount() + 1) % Integer.parseInt(MongoToCloud.progress_saving);
 						((incrementador) MongoToCloud.varias[i]).getCollection().deleteMany(Filters.lte("_id", ((incrementador) varias[i]).getDocument().get("_id")));
 							System.out.println(x + " medicoes foram eliminadas da colecao " + ((incrementador) MongoToCloud.varias[i]).getColecao() + " ao fechar o programa!");
 						
 						saveProgress(database, ((incrementador) varias[i]).getCollection(), ((incrementador) MongoToCloud.varias[i]).getColecao(), ((incrementador) varias[i]).getCount());
+						}
 					}
-					
 					
 					
 					System.exit(0);
@@ -525,6 +528,13 @@ public class MongoToCloud implements MqttCallback {
 				//meter dentro do inner loop e fazer para eliminar de x em x
 				
 					find.close();
+					
+					if(document3 != null) {
+					saveProgress(database, collection, colecao, count);
+					
+					collection.deleteMany(Filters.lte("_id", document3.get("_id")));
+					}
+				
 					find = collection.find().iterator();
 				
 			
@@ -616,11 +626,13 @@ public class MongoToCloud implements MqttCallback {
 			for(int i = 0; i < varias.length; i++) {
 				
 					//eliminar as medicoes ja transferidas entretanto
+				if(((incrementador) varias[i]).getDocument() != null) {
 				int x = (((incrementador) varias[i]).getCount() + 1) % Integer.parseInt(MongoToCloud.progress_saving);
 				((incrementador) MongoToCloud.varias[i]).getCollection().deleteMany(Filters.lte("_id", ((incrementador) varias[i]).getDocument().get("_id")));
 					System.out.println(x + " medicoes foram eliminadas da colecao " + ((incrementador) MongoToCloud.varias[i]).getColecao() + " ao fechar o programa!");
 				
 				saveProgress(database, ((incrementador) varias[i]).getCollection(), ((incrementador) MongoToCloud.varias[i]).getColecao(), ((incrementador) varias[i]).getCount());
+			}
 			}
 		//o que fazer quando a ligacao ao servidor e perdida
 		MongoToCloud.documentLabel.append("A ligacao ao servidor broker foi interrompida!\n");
@@ -664,12 +676,14 @@ public class MongoToCloud implements MqttCallback {
 					for(int i = 0; i < varias.length; i++) {
 						
 					//eliminar as medicoes ja transferidas entretanto
+						if(((incrementador) varias[i]).getDocument() != null) {
 						int x = (((incrementador) varias[i]).getCount() + 1) % Integer.parseInt(MongoToCloud.progress_saving);
 						((incrementador) MongoToCloud.varias[i]).getCollection().deleteMany(Filters.lte("_id", ((incrementador) varias[i]).getDocument().get("_id")));
 					
 						System.out.println(x + " medicoes foram eliminadas da colecao " + ((incrementador) MongoToCloud.varias[i]).getColecao() + " ao fechar o programa!");
 				
 						saveProgress(database, ((incrementador) varias[i]).getCollection(), ((incrementador) MongoToCloud.varias[i]).getColecao(), ((incrementador) varias[i]).getCount());
+					}
 					}
 						
 				System.exit(0);

@@ -217,7 +217,6 @@ public class CloudToMySQL implements MqttCallback {
 			
 		} catch (Exception e) {
 			System.out.println("Nao foi possivel carregar o driver do mysql!");
-			e.printStackTrace();
 			Date date = new Date();
 	        Timestamp ts=new Timestamp(date.getTime());
 	       
