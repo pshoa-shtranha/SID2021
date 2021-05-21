@@ -46,6 +46,8 @@ import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 
+import lalss3.CloudToMySQL;
+import lalss3.MongoToCloud.incrementador;
 import twitter4j.JSONObject;
 
 public class CloudToMongo implements MqttCallback{
@@ -313,7 +315,23 @@ public class CloudToMongo implements MqttCallback{
 						e1.printStackTrace();
 					}
 				}
-			
+				
+				if(clear_local_collections_before_start.equals("true")) {
+					BasicDBObject query = new BasicDBObject();
+				MongoCollection<Document> localCollection = localdb.getCollection("sensorh1");
+				MongoCollection<Document> localCollection2 = localdb.getCollection("sensorh2");
+				MongoCollection<Document> localCollection3 = localdb.getCollection("sensorl1");
+				MongoCollection<Document> localCollection4 = localdb.getCollection("sensorl2");
+				MongoCollection<Document> localCollection5 = localdb.getCollection("sensort1");
+				MongoCollection<Document> localCollection6 = localdb.getCollection("sensort2");
+				localCollection.deleteMany(query);
+				localCollection2.deleteMany(query);
+				localCollection3.deleteMany(query);
+				localCollection4.deleteMany(query);
+				localCollection5.deleteMany(query);
+				localCollection6.deleteMany(query);
+				System.out.println("Apagado com sucesso");
+				}
 
 		}
 
